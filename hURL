@@ -40,6 +40,8 @@ use Digest::MD5 qw(md5_hex);
 use MIME::Base64 ();
 use HTML::Entities;
 use Digest::SHA;
+use URI::file;
+use URI qw();
 
 ## test for color support
 eval { require Term::ANSIColor; };
@@ -67,6 +69,8 @@ sub HELP_MESSAGE {
         print BOLD(), BLUE(), "   -b", CYAN(), "|", BLUE(), "--base64\t", RESET(), "=> ", BOLD(), "b", RESET(), "ase64 decode", RESET(), "\t\t ;  $0 -b \"aGVsbG8gd29ybGQ=\"\n";
         print BOLD(), BLUE(), "   -H", CYAN(), "|", BLUE(), "--HTML\t", RESET(), "=> ", BOLD(), "H", RESET(), "TML encode", RESET(), "\t\t\t ;  $0 -H \"<hello world>\"\n";
         print BOLD(), BLUE(), "   -h", CYAN(), "|", BLUE(), "--html\t", RESET(), "=> ", BOLD(), "h", RESET(), "TML decode", RESET(), "\t\t\t ;  $0 -h \"&lt;hello world&gt;\"\n";
+        print BOLD(), BLUE(), "   -P", CYAN(), "|", BLUE(), "--PATH\t", RESET(), "=> ", BOLD(), "P", RESET(), "ath encode", RESET(), "\t\t\t ;  $0 -H \"/foo/bar\"\n";
+        print BOLD(), BLUE(), "   -p", CYAN(), "|", BLUE(), "--path\t", RESET(), "=> ", BOLD(), "p", RESET(), "ath decode", RESET(), "\t\t\t ;  $0 -h \"file:///foo/bar\"\n";
         print BOLD(), BLUE(), "   -X", CYAN(), "|", BLUE(), "--HEX\t", RESET(), "=> ascii ->  he", BOLD(), "X", RESET(), "\t\t ;  $0 -X \"hello world\"\n";
 	print BOLD(), BLUE(), "\t--esc", RESET(), "   :: output in ", BOLD(), "esc", RESET(), "aped string\t    ; \"\\x00\\x01\\x02\\x03 ...\"\n";
 	print BOLD(), BLUE(), "\t--pair", RESET(), "  :: output in hex", BOLD(), "pair", RESET(), " format\t    ; 00010203 ...\n";
@@ -131,6 +135,8 @@ GetOptions(\%opts,
    'base64|b'	=> \$opts{base64},
    'HTML|H'	=> \$opts{HTML},
    'html|h'	=> \$opts{html},
+   'PATH|P'	=> \$opts{PATH},
+   'path|p'	=> \$opts{path},
    'HEX|X'	=> \$opts{HEX},
    'hex|x'	=> \$opts{hex},
    'md5|m'	=> \$opts{md5},
@@ -238,6 +244,8 @@ if (@file) {
 			base64file() 	if $opts{base64};
 			HTMLfile() 	if $opts{HTML};
 			htmlfile() 	if $opts{html};
+			PATHfile() 	if $opts{PATH};
+			pathfile() 	if $opts{path};
 			HEXfile() 	if $opts{HEX};
 			xfile() 	if $opts{hex};
 			INTfile() 	if $opts{INT};
@@ -279,6 +287,8 @@ BASE64() 	if $opts{BASE64};
 base64() 	if $opts{base64};
 HTML() 		if $opts{HTML};
 html() 		if $opts{html};
+PATH() 		if $opts{PATH};
+path() 		if $opts{path};
 HEX() 		if $opts{HEX};
 x() 		if $opts{hex};
 INT() 		if $opts{INT};
@@ -1125,6 +1135,66 @@ sub string2stackfile {
         }
 }
 
+sub path {
+	$stringpath = URI->new($ARGV[0])->file;
+	# If $stringpath is a Windows file path, then replace the / by \
+	if ($stringpath =~ m/^\/[^:]+:\//i) {
+		$stringpath =~ s/\//\\/g;
+		$stringpath =~ s/^\\//g;
+	}
+	if (($opts{suppress}) && ($stringpath)) {
+		print BOLD(), $stringpath, RESET();
+	} elsif ($stringpath) {
+		print BOLD(), BLUE(), "\nOriginal         :: ", RESET(), BOLD(), "$ARGV[0]\n", RESET();
+		print BOLD(), CYAN(), "URI Path DEcoded :: ", RESET(), BOLD(), "$stringpath\n", RESET();
+    }
+}
+
+sub pathfile {
+	$stringpath = URI->new($string)->file;
+	# If $stringpath is a Windows file path, then replace the / by \
+	if ($stringpath =~ m/^\/[^:]+:\//i) {
+		$stringpath =~ s/\//\\/g;
+		$stringpath =~ s/^\\//g;
+	}
+	if (($opts{suppress}) && ($file)) {
+		print BOLD(), "$stringpath", RESET();
+	} else {
+		print BOLD(), BLUE(), "\nOriginal file     :: ", RESET(), BOLD(), "$file\n", RESET();
+		print BOLD(), CYAN(), "URI Path DEcoded  :: ", RESET(), BOLD(), "$stringpath\n", RESET();
+	}
+}
+
+sub PATH {
+	$stringpath = $ARGV[0];
+	# URI::file does not seem to recognize Windows file paths, so first replace
+	# the \ with / before continuing with the convertion
+	if ($stringpath =~ m/^[^:]+:\\/i) {
+		$stringpath =~ s/(^|\\)/\//g;
+	}
+	if (($opts{suppress}) && ($stringpath)) {
+		print BOLD(), URI::file->new($stringpath), RESET();
+	} elsif ($stringpath) {
+		print BOLD(), BLUE(), "\nOriginal         :: ", RESET(), BOLD(), "$ARGV[0]\n", RESET();
+		print BOLD(), CYAN(), "URI Path ENcoded :: ", RESET(), BOLD(), URI::file->new($stringpath), "\n", RESET();
+	}
+}
+
+sub PATHfile {
+	$stringpath = $string;
+	# URI::file does not seem to recognize Windows file paths, so first replace
+	# the \ with / before continuing with the convertion
+	if ($stringpath =~ m/^[^:]+:\\/i) {
+		$stringpath =~ s/(^|\\)/\//g;
+	}
+	if (($opts{suppress}) && ($file)) {
+		print BOLD(), URI::file->new($stringpath), RESET();
+	} else {
+		print BOLD(), BLUE(), "\nOriginal file     :: ", RESET(), BOLD(), "$file\n", RESET();
+		print BOLD(), CYAN(), "URI Path ENcoded  :: ", RESET(), BOLD(), URI::file->new($stringpath), "\n", RESET();
+	}
+}
+
 # Perl script written by Peter Van Eeckhoutte
 # http://svn.corelan.be:8800/svn/shellcoding/scripts/pvePushString.pl
 # - slight modifications by fnord0
@@ -1847,6 +1917,8 @@ sub main_menu {
 	print " 29)\tROT13 decode\t\turyyb jbeyq\t\thello world\n";
 	print " 30)\tMD5 digest\t\thello world\t\t5eb63bbbe01eeed093cb22bb8f5acdc3\n";
 	print "\n";
+	print " 36)\tURI Path encode\t\t/foo/bar\t\tfile:///foo/bar\n";
+	print " 37)\tURI Path decode\t\tfile:///foo/bar\t\t/foo/bar\n";
 	print BOLD() . " ## \tCommands useful for shellcode creation\t Input\t       Output\n" . RESET();
 	print " ---\t--------------------------------------\t -----\t       ------\n";
 	print " 31)\tpush string 2 stack (corelanc0d3r)\t hello world   ASM code to push string to stack\n";
@@ -1895,6 +1967,8 @@ sub main_menu {
         if ($select =~ /33/){&menu_wbin}
         if ($select =~ /34/){&menu_net}
         if ($select =~ /35/){&menu_NET}
+        if ($select =~ /36/){&menu_PATH}
+        if ($select =~ /37/){&menu_path}
         if ($select =~ /99/){&menu_exit}
         if ($select =~ /^q/){&menu_exit}
         if ($select =~ /^e/){&menu_exit}
@@ -3544,6 +3618,100 @@ sub menu_NET {
         }
 }
 
+sub menu_PATH {
+        print CYAN() . UNDERLINE() . "hURL" . RESET() . UNDERLINE() . ":" . CYAN() . UNDERLINE() . "PATHencode" . RESET();
+        print BOLD() . "> string" . RESET() . " or file?" . BOLD() . " :: " . RESET() . "[" . BOLD() . "string" . RESET() . "] ";
+        my $selectPATHfile = <STDIN>;
+        chomp ($selectPATHfile);
+        $selectPATHfile ||= "string";
+        if ($selectPATHfile =~ m/^f/i) {
+                print CYAN() . UNDERLINE() . "hURL" . RESET() . UNDERLINE() . ":" . CYAN() . UNDERLINE() . "PATHencode" . RESET() . UNDERLINE() . ":" . CYAN() . UNDERLINE() . "filename" . RESET();
+                print BOLD() . "> " . RESET();
+                $file = <STDIN>;
+                        ## expands tilde in filename -- O'Reilly's Perl Cookbook, Recipe #7.3
+                        $file =~ s{ ^ ~ ( [^/]* ) }
+                                { $1
+                                        ? (getpwnam($1))[7]
+                                        : ( $ENV{HOME} || $ENV{LOGDIR}
+                                        || (getpwuid($>))[7]
+                                        )
+                                }ex;
+                chomp ($file);
+                if (! $file) {
+                        print "\n";
+                        goto &main_menu;
+                }
+                &filemenu;
+                &PATHfile;
+                print "\nPress ENTER to continue...";
+                my $input = <STDIN>;
+                goto &main_menu;
+        } elsif ($selectPATHfile =~ m/string/i) {
+                print CYAN() . UNDERLINE() . "hURL" . RESET() . UNDERLINE() . ":" . CYAN() . UNDERLINE() . "PATHencode" . RESET() . UNDERLINE() . ":" . CYAN() . UNDERLINE() . "string" . RESET();
+                print BOLD() . "> " . RESET();
+                $ARGV[0] = <STDIN>;
+                chomp ($ARGV[0]);
+                if (! $ARGV[0]) {
+                       print "\n";
+                       goto &main_menu;
+                }
+                &PATH;
+                print "\nPress ENTER to continue...";
+                my $input = <STDIN>;
+                goto &main_menu;
+        } else {
+                print "\n";
+                goto &main_menu;
+        }
+}
+
+sub menu_path {
+        print CYAN() . UNDERLINE() . "hURL" . RESET() . UNDERLINE() . ":" . CYAN() . UNDERLINE() . "PATHdecode" . RESET();
+        print BOLD() . "> string" . RESET() . " or file?" . BOLD() . " :: " . RESET() . "[" . BOLD() . "string" . RESET() . "] ";
+        my $selectpathfile = <STDIN>;
+        chomp ($selectpathfile);
+        $selectpathfile ||= "string";
+        if ($selectpathfile =~ m/^f/i) {
+                print CYAN() . UNDERLINE() . "hURL" . RESET() . UNDERLINE() . ":" . CYAN() . UNDERLINE() . "PATHdecode" . RESET() . UNDERLINE() . ":" . CYAN() . UNDERLINE() . "filename" . RESET();
+                print BOLD() . "> " . RESET();
+                $file = <STDIN>;
+                        ## expands tilde in filename -- O'Reilly's Perl Cookbook, Recipe #7.3
+                        $file =~ s{ ^ ~ ( [^/]* ) }
+                                { $1
+                                        ? (getpwnam($1))[7]
+                                        : ( $ENV{HOME} || $ENV{LOGDIR}
+                                        || (getpwuid($>))[7]
+                                        )
+                                }ex;
+                chomp ($file);
+                if (! $file) {
+                        print "\n";
+                        goto &main_menu;
+                }
+                &filemenu;
+                &pathfile;
+                print "\nPress ENTER to continue...";
+                my $input = <STDIN>;
+                goto &main_menu;
+        } elsif ($selectpathfile =~ m/string/i) {
+                print CYAN() . UNDERLINE() . "hURL" . RESET() . UNDERLINE() . ":" . CYAN() . UNDERLINE() . "PATHdecode" . RESET() . UNDERLINE() . ":" . CYAN() . UNDERLINE() . "string" . RESET();
+                print BOLD() . "> " . RESET();
+                $ARGV[0] = <STDIN>;
+                chomp ($ARGV[0]);
+                if (! $ARGV[0]) {
+                       print "\n";
+                       goto &main_menu;
+                }
+                &path;
+                print "\nPress ENTER to continue...";
+                my $input = <STDIN>;
+                goto &main_menu;
+        } else {
+                print "\n";
+                goto &main_menu;
+        }
+}
+
 sub menu_exit {
         print "\n";
         print BOLD() . "[" . CYAN() . "*" . RESET() . BOLD() . "]  Thanks for using " . "hURL" . RESET() . "\n";
@@ -3818,6 +3986,8 @@ I<hURL> I<[> B<->flagF<|>B<-->flag I<]> I<[> B<-f> <B<file1>>F<,><B<file2>> I<]>
    -b|--base64	=> base64 decode		 ;  ./hURL -b "aGVsbG8gd29ybGQ="
    -H|--HTML	=> HTML encode			 ;  ./hURL -H "<hello world>"
    -h|--html	=> hTML decode			 ;  ./hURL -h "&lt;hello world&gt;"
+   -P|--PATH	=> Path encode			 ;  ./hURL -H "/foo/bar"
+   -p|--path	=> path decode			 ;  ./hURL -h "file:///foo/bar"
    -X|--HEX	=> ascii ->  heX		 ;  ./hURL -X "hello world"
 	--esc   :: output in escaped string	    ; "\x00\x01\x02\x03 ..."
 	--pair  :: output in hexpair format	    ; 00010203 ...

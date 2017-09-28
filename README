@@ -11,6 +11,8 @@
    -b|--base64	=> base64 decode		 ;  ./hURL -b "aGVsbG8gd29ybGQ="
    -H|--HTML	=> HTML encode			 ;  ./hURL -H "<hello world>"
    -h|--html	=> hTML decode			 ;  ./hURL -h "&lt;hello world&gt;"
+   -P|--PATH	=> Path encode			 ;  ./hURL -H "/foo/bar"
+   -p|--path	=> path decode			 ;  ./hURL -h "file:///foo/bar"
    -X|--HEX	=> ascii ->  heX		 ;  ./hURL -X "hello world"
 	--esc   :: output in escaped string	    ; "\x00\x01\x02\x03 ..."
 	--pair  :: output in hexpair format	    ; 00010203 ...
